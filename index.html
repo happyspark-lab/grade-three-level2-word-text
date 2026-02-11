@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>三年级下册 · 词语闯关 (iOS修复版)</title>
+    <script src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <style>
+        :root {
+            /* 三年级配色：更活泼的翠绿色调 */
+            --primary: #10b981; 
+            --primary-dark: #047857;
+            --bg-gradient: linear-gradient(135deg, #ecfdf5 0%, #f0fdf4 100%);
+            --card-bg: rgba(255, 255, 255, 0.95);
+            --text: #064e3b;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+            background: var(--bg-gradient);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center; 
+            padding: 15px;
+        }
+
+        .container {
+            background: var(--card-bg);
+            border-radius: 24px;
+            box-shadow: 0 10px 30px rgba(16, 185, 129, 0.15);
+            width: 100%;
+            max-width: 600px;
+            padding: 25px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            border: 1px solid rgba(255,255,255,0.6);
+            backdrop-filter: blur(10px);
+            position: relative;
+        }
+
+        header { text-align: center; margin-bottom: 5px; }
+        .header-badge {
+            background: #d1fae5; color: var(--primary-dark); font-size: 0.85rem;
+            padding: 4px 12px; border-radius: 20px; display: inline-block;
+            margin-bottom: 8px; font-weight: bold; border: 1px solid #6ee7b7;
+        }
+        h1 { 
+            color: var(--primary); font-size: 1.6rem; margin: 0; 
+            text-shadow: 1px 1px 0px rgba(209, 250, 229, 0.5);
+        }
+
+        .motivation-box {
+            background: linear-gradient(to right, #ecfdf5, #f0fdf4);
+            border-left: 4px solid #34d399;
+            padding: 12px;
+            border-radius: 8px;
+            color: #065f46;
+            font-size: 0.95rem;
+            text-align: center;
+            font-weight: bold;
+            min-height: 48px;
+            display: flex; align-items: center; justify-content: center;
+        }
+
+        .setup-panel {
+            border: 2px dashed #6ee7b7; border-radius: 16px; padding: 20px;
+            background: #fff; transition: all 0.3s;
+        }
+
+        .lesson-select {
+            width: 100%; padding: 12px; font-size: 1.05rem;
+            border: 2px solid var(--primary); border-radius: 10px;
+            background: white; font-weight: bold; outline: none;
+            color: #047857; margin-bottom: 5px;
+        }
+
+        .settings-row {
+            display: flex; gap: 8px; justify-content: space-between; margin: 15px 0;
+        }
+        .setting-group { 
+            flex: 1; text-align: center; background: #f0fdf4;
+            padding: 8px 5px; border-radius: 8px; border: 1px solid #d1fae5;
+        }
+        .setting-group label { display: block; font-size: 0.75rem; color: #64748b; margin-bottom: 3px;}
+        select { 
+            width: 100%; border: none; background: transparent; 
+            font-weight: bold; color: #334155; text-align: center; font-size: 0.95rem;
+        }
+
+        .main-btn {
+            background: linear-gradient(to bottom right, #10b981, #059669);
+            color: white; border: none; padding: 16px; border-radius: 50px;
+            font-size: 1.3rem; font-weight: 800; width: 100%;
+            box-shadow: 0 8px 20px rgba(16, 185, 129, 0.3);
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+        }
+        .main-btn:active { transform: scale(0.98); }
+
+        /* Running UI */
+        .running-ui { display: none; text-align: center; padding: 10px 0; }
+        .level-badge {
+            background: #34d399; color: white; padding: 4px 10px;
+            border-radius: 12px; font-size: 0.8rem; font-weight: bold;
+            display: inline-block; margin-bottom: 10px;
+        }
+
+        .big-word-display {
+            font-size: 3.5rem; font-weight: 800; color: var(--text);
+            margin: 15px 0; min-height: 80px; font-family: "KaiTi", "楷体", serif;
+        }
+
+        .progress-container {
+            height: 12px; background: #e2e8f0; border-radius: 10px;
+            overflow: hidden; margin: 15px 0;
+        }
+        .progress-fill {
+            height: 100%; background: linear-gradient(90deg, #34d399, #10b981);
+            width: 0%; transition: width 0.3s ease-out;
+        }
+
+        .control-btns { display: flex; justify-content: center; gap: 15px; margin-top: 25px;}
+        .control-btn {
+            padding: 10px 20px; border-radius: 10px; border: none;
+            font-weight: bold; font-size: 0.95rem;
+        }
+        .btn-pause { background: #ecfdf5; color: #047857; border: 1px solid #6ee7b7; }
+        .btn-stop { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
+
+        .answer-list {
+            margin-top: 20px; text-align: left; background: #ecfdf5;
+            padding: 15px; border-radius: 12px; display: none; border: 2px solid #d1fae5;
+        }
+        .answer-grid {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 10px;
+        }
+        .answer-item {
+            background: white; padding: 10px 2px; border-radius: 8px;
+            text-align: center; font-size: 1rem; font-weight: bold;
+            color: #047857; border-bottom: 2px solid #6ee7b7;
+        }
+
+        .expand-toggle { text-align: center; color: #94a3b8; font-size: 0.8rem; margin-top: 15px; padding: 10px;}
+        #customInputArea { display: none; margin-top: 10px; padding-top: 10px; border-top: 1px dashed #eee;}
+        textarea { width: 100%; height: 80px; padding: 8px; border: 1px solid #ddd; border-radius: 8px; }
+
+        @keyframes popIn { 0% { transform: scale(0.9); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+        .ios-tip { font-size: 0.75rem; color: #ef4444; background: #fee2e2; padding: 8px; border-radius: 8px; margin-bottom: 10px; text-align: left; display: none;}
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <div class="header-badge">🌿 三年级下册 🌿</div>
+        <h1>词语大闯关</h1>
+    </header>
+    
+    <div id="iosTip" class="ios-tip">
+        📱 <b>iPhone用户提示：</b>请拨开侧边静音键，并调大媒体音量。
+    </div>
+
+    <div class="motivation-box" id="motivationBox">
+        准备好了吗？字写得漂亮，人也更精神！
+    </div>
+
+    <div id="setupArea" class="setup-panel">
+        <label style="display:block; margin-bottom:5px; font-weight:bold; color:#047857; font-size:0.9rem;">📚 选择课文：</label>
+        <select id="lessonSelect" class="lesson-select" onchange="previewWords()"></select>
+        <div id="wordPreview" style="font-size:0.8rem; color:#999; margin-bottom:15px; height:20px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"></div>
+
+        <div class="settings-row">
+            <div class="setting-group">
+                <label>🗣️ 语速</label>
+                <select id="speechRate">
+                    <option value="1">正常</option>
+                    <option value="0.8">稍慢</option>
+                    <option value="0.6" selected>较慢</option>
+                    <option value="0.5">很慢</option>
+                </select>
+            </div>
+            <div class="setting-group">
+                <label>🔁 重复</label>
+                <select id="repeatCount">
+                    <option value="1">1次</option>
+                    <option value="2" selected>2次</option>
+                    <option value="3">3次</option>
+                </select>
+            </div>
+            <div class="setting-group">
+                <label>✍️ 书写</label>
+                <select id="waitTime">
+                    <option value="5">5秒</option>
+                    <option value="8" selected>8秒</option>
+                    <option value="12">12秒</option>
+                </select>
+            </div>
+        </div>
+
+        <button class="main-btn" onclick="initDictation()">
+            <span>🚀 开始挑战</span>
+        </button>
+
+        <div class="expand-toggle" onclick="toggleCustomArea()">+ 自定义 / PDF识别</div>
+        <div id="customInputArea">
+             <textarea id="customWordInput" placeholder="在此粘贴词语..."></textarea>
+             <input type="file" accept="application/pdf" onchange="handlePdfUpload(event)" style="margin-top:8px; width:100%">
+             <div id="ocrStatus" style="font-size:0.8rem; color:green; margin-top:5px;"></div>
+        </div>
+    </div>
+
+    <div id="runningArea" class="running-ui">
+        <span class="level-badge" id="currentLevelName">当前关卡</span>
+        
+        <div class="progress-container">
+            <div class="progress-fill" id="progressFill"></div>
+        </div>
+        <div class="progress-text" id="progressText" style="font-size:0.8rem; color:#888;">0 / 0</div>
+
+        <div class="big-word-display" id="wordDisplay">Ready</div>
+        <div style="color: #64748b; font-size: 0.9rem;" id="statusMsg">点击开始</div>
+
+        <div class="control-btns">
+            <button class="control-btn btn-pause" id="pauseBtn" onclick="togglePause()">暂停</button>
+            <button class="control-btn btn-stop" onclick="stopDictation()">结束</button>
+        </div>
+
+        <div class="answer-list" id="answerList"></div>
+    </div>
+</div>
+
+<script>
+    // --- 三年级下册 数据区 ---
+    const lessonGroups = [
+        { 
+            name: "第1课：古诗三首", 
+            words: ["融化", "燕子", "鸳鸯", "恩惠", "崇高", "芦苇", "发芽", "梅花", "小溪", "泛舟", "减少"] 
+        },
+        { 
+            name: "第2课：燕子", 
+            words: ["凑合", "吹拂", "集合", "聚集", "形状", "掠过", "偶尔", "沾水", "疲倦", "空闲", "纤细", "痕迹", "乌黑", "活泼", "春日", "轻风", "洒落", "赶集", "聚拢", "形成", "加入", "春光", "湖面", "闲散"] 
+        },
+        { 
+            name: "第3课：荷花", 
+            words: ["花瓣", "莲蓬", "饱胀", "破裂", "姿势", "仿佛", "随风", "舞蹈", "停止", "荷花", "清香", "圆盘", "眼前", "本领", "飘动"] 
+        },
+        { 
+            name: "第5课：守株待兔", 
+            words: ["守候", "植株", "等待", "宋朝", "耕地", "接触", "颈部", "解释", "其他"] 
+        },
+        { 
+            name: "第6课：陶罐和铁罐", 
+            words: ["骄傲", "谦虚", "懦弱", "提水", "尘土", "惊讶", "捧着", "古代", "价值", "国王", "傲慢", "神气", "住嘴", "相提并论", "王朝", "光洁", "美观", "动手"] 
+        },
+        { 
+            name: "第7课：鹿角和鹿腿", 
+            words: ["梅花鹿", "池塘", "倒映", "欣赏", "匀称", "别致", "配合", "传说", "哎呀", "狮子", "追赶", "叹气", "痛快", "精美", "没精打采", "机灵", "机会"] 
+        },
+        { 
+            name: "第9课：古诗三首", 
+            words: ["符号", "欲望", "灵魂", "借口", "喝酒", "何处", "牧童", "兄弟", "独自", "异乡", "佳节"] 
+        },
+        { 
+            name: "第10课：纸的发明", 
+            words: ["伟大", "记录", "保存", "大约", "经验", "打捞", "阿姨", "欧洲", "社会", "造纸术", "吸收", "原料", "满足", "朝鲜", "半岛", "日本", "阿拉伯"] 
+        },
+        { 
+            name: "第11课：赵州桥", 
+            words: ["赵州桥", "省略", "县城", "石匠", "设计", "历史", "创举", "而且", "智慧", "经历", "冲击", "节省", "不但", "各自", "似乎", "体现", "人民", "才干"] 
+        },
+        { 
+            name: "第12课：一幅名扬中外的画", 
+            words: ["选择", "皇宫", "摊位", "小贩", "官吏", "毛驴", "乘客", "灯笼", "栏杆", "礼貌"] 
+        },
+        { 
+            name: "第13课：花钟", 
+            words: ["芬芳", "内存", "醒来", "长寿", "苏醒", "强大", "展示", "昆虫", "修建", "组成", "争奇斗艳", "迷人", "艳丽", "睡莲", "万寿菊", "欣然", "含笑"] 
+        },
+        { 
+            name: "第14课：蜜蜂", 
+            words: ["蜜蜂", "辨认", "阻力", "跨越", "包括", "检查", "准确", "错误", "沿途", "陌生", "能力", "将近", "迷失", "无误", "尽管", "确实", "记忆", "本能"] 
+        },
+        { 
+            name: "第16课：宇宙的另一边", 
+            words: ["宇宙", "淌水", "秘密", "一栋", "楼梯", "铃声", "乘法", "情绪", "一篇", "越过", "星空", "流淌", "相遇", "万物", "乘法", "思绪"] 
+        },
+        { 
+            name: "第17课：我变成了一棵树", 
+            words: ["形状", "狐狸", "弯腰", "零食", "巧克力", "香肠", "继续", "抬头", "麻烦", "担心", "丁零", "失望", "背包", "花生", "牛奶", "饭菜", "排骨"] 
+        },
+        { 
+            name: "第18课：童年的水墨画", 
+            words: ["墨水", "染绿", "竹竿", "奔腾", "破碎", "拨动", "浪花", "葫芦", "清爽", "蘑菇", "水墨画", "垂柳", "钓竿", "扑腾", "扇动", "戏耍", "松树", "松针"] 
+        },
+        { 
+            name: "第19课：剃头大师", 
+            words: ["表示", "胆小", "鬼怪", "理发", "夺走", "责骂", "仇人", "差别", "付出", "加倍", "虽然", "肥皂泡", "条件", "大师", "表弟", "姑父", "欢迎", "摆布", "双倍", "过年", "央求", "天分", "电灯泡"] 
+        },
+        { 
+            name: "第20课：肥皂泡", 
+            words: ["肥皂", "走廊", "剩下", "饭碗", "悠闲", "若是", "透明", "娇软", "拉扯", "仰头", "一串", "婴儿", "希望", "种类", "其中", "网球", "分裂", "形式", "圆满", "轻悠悠", "飞越", "目送"] 
+        },
+        { 
+            name: "第22课：我们奇妙的世界", 
+            words: ["呈现", "变幻", "诱人", "圆润", "光芒", "冰柱", "刀剑", "普通", "模型", "奇妙", "群星", "奇迹", "感叹", "锋利", "存在"] 
+        },
+        { 
+            name: "第23课：海底世界", 
+            words: ["宁静", "器官", "汪洋", "参加", "攻击", "推开", "迅速", "后退", "轮船", "煤炭", "钢铁", "海底", "行进", "海参", "反推力", "长途", "石油", "天然气"] 
+        },
+        { 
+            name: "第24课：火烧云", 
+            words: ["必须", "胡子", "灿烂", "骑马", "秒表", "腿脚", "凶猛", "接着", "寺庙", "威武", "镇静", "火烧云", "晚饭", "金灿灿"] 
+        },
+        { 
+            name: "第25课：慢性子裁缝和急性子顾客", 
+            words: ["性子", "试卷", "货物", "夹袄", "夸奖", "服务", "衬衫", "负责", "手艺", "布料", "交货", "笑话", "大方", "道理", "实在", "提前", "名声", "感动"] 
+        },
+        { 
+            name: "第27课：漏", 
+            words: ["漏雨", "喂猪", "肥胖", "毛驴", "盗贼", "恶狼", "莫非", "厉害", "拥抱", "书架", "胶水", "粘贴", "偏心", "里屋", "发抖", "松手", "跟前", "甘心"] 
+        }
+    ];
+
+    const quotes = {
+        start: ["小树苗，快快长！", "坐姿端正，字迹工整。", "一笔一划，写出精彩！", "认真听写，你最棒！"],
+        half: ["太好了，已经坚持一半啦！", "加油加油，你是小勇士！", "保持专注，胜利在望！"],
+        end: ["挑战成功！给自己一个大大的赞！", "你学会了好多新词语，真厉害！"]
+    };
+
+    // --- 全局变量 ---
+    let currentSessionList = [];
+    let currentIndex = 0;
+    let isRunning = false;
+    let isPaused = false;
+    let synth = window.speechSynthesis;
+    
+    // 🔥 iOS 关键修复：定义全局 utterance 变量，防止被垃圾回收
+    let currentUtterance = null;
+    let chineseVoice = null;
+
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+    // --- 初始化 ---
+    window.onload = function() {
+        initLessonSelector();
+        updateMotivation(quotes.start[Math.floor(Math.random()*quotes.start.length)]);
+        
+        // 检测 iOS 并显示提示
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+        if (isIOS) {
+            document.getElementById('iosTip').style.display = 'block';
+        }
+
+        // 尝试预加载语音
+        loadVoices();
+        if (synth.onvoiceschanged !== undefined) {
+            synth.onvoiceschanged = loadVoices;
+        }
+    }
+
+    function loadVoices() {
+        const voices = synth.getVoices();
+        // 优先找中文语音
+        chineseVoice = voices.find(v => v.lang === 'zh-CN' || v.lang === 'zh-HK' || v.name.includes('Ting'));
+    }
+
+    function initLessonSelector() {
+        const select = document.getElementById('lessonSelect');
+        select.innerHTML = '';
+        lessonGroups.forEach((group, index) => {
+            const option = document.createElement('option');
+            option.value = index;
+            const uniqueCount = new Set(group.words).size;
+            option.text = `${group.name} [${uniqueCount}词]`;
+            select.appendChild(option);
+        });
+        if(lessonGroups.length > 0) previewWords();
+    }
+
+    function previewWords() {
+        const index = document.getElementById('lessonSelect').value;
+        const words = lessonGroups[index].words;
+        const uniqueWords = [...new Set(words)];
+        document.getElementById('wordPreview').innerText = "预览: " + uniqueWords.join("、");
+    }
+
+    function toggleCustomArea() {
+        const area = document.getElementById('customInputArea');
+        area.style.display = area.style.display === 'none' ? 'block' : 'none';
+    }
+
+    function updateMotivation(text) {
+        const box = document.getElementById('motivationBox');
+        box.style.opacity = 0;
+        setTimeout(() => { box.innerText = text; box.style.opacity = 1; }, 300);
+    }
+
+    // --- 听写逻辑 ---
+
+    function initDictation() {
+        // 🔥 iOS 核心修复 1：在用户点击瞬间，必须触发一次 synth.speak
+        synth.cancel();
+        const warmUp = new SpeechSynthesisUtterance('');
+        synth.speak(warmUp);
+
+        const customInput = document.getElementById('customWordInput').value.trim();
+        let sessionName = "";
+
+        if (customInput.length > 0) {
+            currentSessionList = processTextToWords(customInput);
+            if(currentSessionList.length === 0) { alert("无效的词语输入"); return; }
+            sessionName = "自定义挑战";
+        } else {
+            const index = document.getElementById('lessonSelect').value;
+            currentSessionList = [...new Set(lessonGroups[index].words)];
+            sessionName = lessonGroups[index].name;
+        }
+
+        document.getElementById('setupArea').style.display = 'none';
+        document.getElementById('runningArea').style.display = 'block';
+        document.getElementById('answerList').style.display = 'none';
+        document.getElementById('answerList').innerHTML = '';
+        document.getElementById('currentLevelName').innerText = sessionName;
+
+        startSession();
+    }
+
+    function processTextToWords(text) {
+        const extracted = text.match(/[\u4e00-\u9fa5]+/g);
+        if (!extracted) return [];
+        return [...new Set(extracted.filter(w => w.length >= 1))];
+    }
+
+    // --- 核心循环 ---
+    async function startSession() {
+        isRunning = true;
+        isPaused = false;
+        currentIndex = 0;
+        document.getElementById('pauseBtn').innerText = '暂停';
+        
+        const display = document.getElementById('wordDisplay');
+        const status = document.getElementById('statusMsg');
+        
+        // 倒计时
+        status.innerText = "准备开始...";
+        for(let i=3; i>0; i--) {
+            display.innerText = i;
+            await sleep(1000);
+        }
+
+        const total = currentSessionList.length;
+
+        while (currentIndex < total && isRunning) {
+            updateProgress();
+            
+            if (currentIndex === Math.floor(total / 2)) {
+                updateMotivation(quotes.half[Math.floor(Math.random()*quotes.half.length)]);
+            }
+
+            await checkPause();
+            if (!isRunning) break;
+
+            const word = currentSessionList[currentIndex];
+            
+            display.style.animation = 'none';
+            display.offsetHeight; 
+            display.style.animation = 'popIn 0.5s';
+            
+            display.innerText = `第 ${currentIndex + 1} 个`;
+            display.style.color = '#064e3b';
+            status.innerText = '正在朗读...';
+
+            const repeat = parseInt(document.getElementById('repeatCount').value);
+            for (let r=0; r < repeat; r++) {
+                await checkPause(); 
+                if (!isRunning) break;
+                
+                await speakWord(word); // 等待朗读完成
+                
+                if (r < repeat - 1) await sleep(1200); 
+            }
+
+            if (!isRunning) break;
+            status.innerText = '请书写...';
+            display.style.color = '#e2e8f0'; 
+            
+            const waitTime = parseInt(document.getElementById('waitTime').value) * 10; 
+            for(let t=0; t<waitTime; t++) { 
+                await checkPause();
+                if (!isRunning) break;
+                await sleep(100);
+            }
+
+            currentIndex++;
+        }
+
+        if (isRunning) {
+            finishDictation();
+        }
+    }
+
+    // 🔥 iOS 核心修复 2：语音合成 Promise 封装
+    function speakWord(text) {
+        return new Promise((resolve) => {
+            // 先停止之前的
+            synth.cancel();
+
+            const u = new SpeechSynthesisUtterance(text);
+            u.lang = 'zh-CN';
+            
+            if (chineseVoice) {
+                u.voice = chineseVoice;
+            }
+
+            const selectedRate = document.getElementById('speechRate').value;
+            u.rate = parseFloat(selectedRate);
+            
+            // 🔥 关键：将 utterance 赋值给全局变量
+            currentUtterance = u;
+
+            u.onend = () => {
+                currentUtterance = null; 
+                resolve();
+            };
+
+            u.onerror = (e) => {
+                console.error("Speech error", e);
+                currentUtterance = null;
+                resolve();
+            };
+
+            synth.speak(u);
+
+            // 🔥 iOS 核心修复 3：超时强制跳过 (4秒)
+            setTimeout(() => {
+                if (currentUtterance === u) {
+                    console.log("iOS timeout fallback");
+                    resolve();
+                }
+            }, 4000); 
+        });
+    }
+
+    function updateProgress() {
+        const total = currentSessionList.length;
+        document.getElementById('progressText').innerText = `进度: ${currentIndex} / ${total}`;
+        const pct = ((currentIndex) / total) * 100;
+        document.getElementById('progressFill').style.width = `${pct}%`;
+    }
+
+    async function checkPause() {
+        while (isPaused && isRunning) {
+            await sleep(200);
+        }
+    }
+
+    function togglePause() {
+        isPaused = !isPaused;
+        const btn = document.getElementById('pauseBtn');
+        if (isPaused) {
+            synth.cancel(); 
+            btn.innerText = '继续';
+            btn.style.background = "#d1fae5";
+            btn.style.color = "#064e3b";
+            document.getElementById('statusMsg').innerText = '⏸ 已暂停';
+        } else {
+            btn.innerText = '暂停';
+            btn.style.background = "#ecfdf5";
+            btn.style.color = "#047857";
+        }
+    }
+
+    function stopDictation() {
+        if(confirm("确定要结束吗？")) {
+            isRunning = false;
+            synth.cancel();
+            document.getElementById('runningArea').style.display = 'none';
+            document.getElementById('setupArea').style.display = 'block';
+            updateMotivation("没关系，下次继续！");
+        }
+    }
+
+    function finishDictation() {
+        const display = document.getElementById('wordDisplay');
+        display.innerHTML = '<div style="animation:popIn 0.6s"><span style="font-size:3rem;display:inline-block;animation:float 2s infinite">🌟</span><br>完成!</div>';
+        display.style.fontSize = "2rem";
+        document.getElementById('statusMsg').innerText = "太棒了！快检查一下！";
+        
+        document.getElementById('progressFill').style.width = '100%';
+        document.getElementById('progressText').innerText = "100%";
+        updateMotivation(quotes.end[Math.floor(Math.random()*quotes.end.length)]);
+
+        const list = document.getElementById('answerList');
+        let html = '<h3 style="margin-bottom:15px; color:#059669; text-align:center;">🏆 答案核对卡</h3><div class="answer-grid">';
+        currentSessionList.forEach((w, i) => {
+            html += `<div class="answer-item"><span style="font-size:0.7em;color:#aaa;display:block">${i+1}</span>${w}</div>`;
+        });
+        html += '</div><div style="text-align:center; margin-top:20px;"><button class="control-btn" onclick="location.reload()" style="background:#10b981;color:white;">再来一局</button></div>';
+        
+        list.innerHTML = html;
+        list.style.display = 'block';
+        document.querySelector('.control-btns').style.display = 'none';
+        
+        setTimeout(() => { list.scrollIntoView({ behavior: 'smooth' }); }, 500);
+    }
+
+    async function handlePdfUpload(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const statusEl = document.getElementById('ocrStatus');
+        statusEl.innerText = '⏳ 正在解析...';
+        try {
+            const arrayBuffer = await file.arrayBuffer();
+            const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+            let fullText = '';
+            for (let i = 1; i <= pdf.numPages; i++) {
+                const page = await pdf.getPage(i);
+                const textContent = await page.getTextContent();
+                fullText += textContent.items.map(item => item.str).join(' ');
+            }
+            document.getElementById('customWordInput').value = fullText;
+            statusEl.innerText = '✅ 解析成功';
+        } catch (e) {
+            console.error(e);
+            statusEl.innerText = '❌ 解析失败';
+        }
+    }
+
+    function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+</script>
+</body>
+</html>
