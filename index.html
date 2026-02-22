@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>三年级下册 · 词语闯关 (iOS修复版)</title>
+    <title>三年级下册 · 词语闯关</title>
     <script src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <style>
@@ -79,6 +79,18 @@
             color: #047857; margin-bottom: 5px;
         }
 
+        .preview-list {
+            display: block;
+            margin-top: 16px;
+            max-height: 220px;
+            overflow-y: auto;
+            text-align: left;
+            background: #ecfdf5;
+            padding: 15px;
+            border-radius: 12px;
+            border: 2px solid #d1fae5;
+        }
+
         .settings-row {
             display: flex; gap: 8px; justify-content: space-between; margin: 15px 0;
         }
@@ -140,7 +152,7 @@
         }
         .answer-item {
             background: white; padding: 10px 2px; border-radius: 8px;
-            text-align: center; font-size: 1rem; font-weight: bold;
+            text-align: center; font-size: 2rem; font-weight: bold;
             color: #047857; border-bottom: 2px solid #6ee7b7;
         }
 
@@ -171,7 +183,6 @@
     <div id="setupArea" class="setup-panel">
         <label style="display:block; margin-bottom:5px; font-weight:bold; color:#047857; font-size:0.9rem;">📚 选择课文：</label>
         <select id="lessonSelect" class="lesson-select" onchange="previewWords()"></select>
-        <div id="wordPreview" style="font-size:0.8rem; color:#999; margin-bottom:15px; height:20px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"></div>
 
         <div class="settings-row">
             <div class="setting-group">
@@ -204,6 +215,8 @@
         <button class="main-btn" onclick="initDictation()">
             <span>🚀 开始挑战</span>
         </button>
+
+        <div id="wordPreview" class="preview-list"></div>
 
         <div class="expand-toggle" onclick="toggleCustomArea()">+ 自定义 / PDF识别</div>
         <div id="customInputArea">
@@ -386,7 +399,13 @@
         const index = document.getElementById('lessonSelect').value;
         const words = lessonGroups[index].words;
         const uniqueWords = [...new Set(words)];
-        document.getElementById('wordPreview').innerText = "预览: " + uniqueWords.join("、");
+        const list = document.getElementById('wordPreview');
+        let html = '<div class="answer-grid">';
+        uniqueWords.forEach((w, i) => {
+            html += `<div class="answer-item"><span style="font-size:0.7em;color:#aaa;display:block">${i+1}</span>${w}</div>`;
+        });
+        html += '</div>';
+        list.innerHTML = html;
     }
 
     function toggleCustomArea() {
